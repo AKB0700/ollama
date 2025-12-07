@@ -84,10 +84,15 @@ ComfyUI/models/clip/
 2. Download all four required files listed above
 3. Verify the file sizes match the expected sizes
 
-**Sources:**
-- Official Wan-AI repositories
-- HuggingFace model hub
-- Community repacks and mirrors
+**Recommended Sources:**
+- Official Wan-AI GitHub repository: https://github.com/Wan-AI (check releases and model repositories)
+- HuggingFace model hub: Search for "Wan2.1-T2V-14B" or "Wan-AI"
+- Community repacks: Check trusted model sharing platforms and forums
+
+**Important:** Always download from trusted sources. Verify file integrity by:
+- Checking file sizes match expected values
+- Comparing checksums/hashes if provided by the source
+- Reading community reviews and feedback about the source
 
 ### Step 2: Create Required Directories
 
@@ -197,10 +202,16 @@ ComfyUI/
 
 ### Corrupted or Incomplete Downloads
 
-1. **Verify checksums**: Check MD5/SHA256 hashes if provided
-2. **Re-download**: Download files again if they seem corrupted
-3. **Verify file sizes**: Ensure downloaded files match expected sizes
-4. **Check disk space**: Ensure sufficient space during download
+1. **Verify checksums**: Check MD5/SHA256 hashes if provided by your download source
+2. **Compare file sizes**: Ensure downloaded files match expected sizes:
+   - Core models: ~14-15 GB each
+   - Text encoder: ~4-5 GB
+   - VAE: Check size from source documentation
+3. **Re-download**: Download files again if they seem corrupted
+4. **Check disk space**: Ensure sufficient space during download (at least 50 GB free recommended)
+5. **Use reliable sources**: Download from trusted, verified sources only
+
+**Note:** Checksum values vary by source and version. Always obtain checksums from the same trusted source where you downloaded the files.
 
 ## Performance Considerations
 
