@@ -56,7 +56,7 @@ function Download-OllamaSetup {
     }
     catch {
         Write-Error-Message "Failed to download Ollama: $_"
-        exit 1
+        throw "Download failed"
     }
 }
 
@@ -145,7 +145,7 @@ function Main {
     $osVersion = [System.Environment]::OSVersion.Version
     if ($osVersion.Major -lt 10) {
         Write-Error-Message "Windows 10 or newer is required"
-        exit 1
+        throw "Unsupported Windows version"
     }
     
     # Check if already installed
@@ -155,7 +155,7 @@ function Main {
         $response = Read-Host "Do you want to reinstall? (y/N)"
         if ($response -notmatch '^[Yy]$') {
             Write-Status "Installation cancelled."
-            exit 0
+            return
         }
     }
     
@@ -171,7 +171,7 @@ function Main {
         $installSuccess = Install-Ollama -SetupPath $setupPath
         
         if (-not $installSuccess) {
-            exit 1
+            throw "Installation failed"
         }
         
         # Wait a moment for installation to complete
@@ -202,6 +202,10 @@ function Main {
         Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
+    catch {
+        Write-Error-Message "Installation failed: $_"
+        throw
+    }
     finally {
         # Cleanup temp directory
         if (Test-Path $tempDir) {
@@ -211,4 +215,13 @@ function Main {
 }
 
 # Run main function
-Main
+try {
+    Main
+}
+catch {
+    Write-Host ""
+    Write-Error-Message "Fatal error: $_"
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}

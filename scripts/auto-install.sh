@@ -55,12 +55,17 @@ install_macos() {
     # Check if Ollama is already installed
     if [ -d "/Applications/Ollama.app" ]; then
         warning "Ollama is already installed at /Applications/Ollama.app"
-        read -p "Do you want to reinstall? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            status "Installation cancelled."
-            exit 0
-        fi
+        printf "Do you want to reinstall? (y/N): "
+        read REPLY
+        case "$REPLY" in
+            [Yy]|[Yy][Ee][Ss])
+                status "Proceeding with reinstallation..."
+                ;;
+            *)
+                status "Installation cancelled."
+                exit 0
+                ;;
+        esac
     fi
     
     TEMP_DIR=$(mktemp -d)
@@ -109,8 +114,17 @@ install_macos() {
 install_windows() {
     status "Detected Windows system"
     
-    # Check if we're in WSL
-    if grep -qi microsoft /proc/version 2>/dev/null; then
+    # Check if we're in WSL - multiple detection methods for reliability
+    IS_WSL=false
+    if [ -f /proc/version ] && grep -qi microsoft /proc/version; then
+        IS_WSL=true
+    elif [ -n "$WSL_DISTRO_NAME" ]; then
+        IS_WSL=true
+    elif [ -d "/mnt/c" ] && [ -d "/mnt/c/Windows" ]; then
+        IS_WSL=true
+    fi
+    
+    if [ "$IS_WSL" = true ]; then
         status "Running in WSL - installing Linux version..."
         install_linux
         return
