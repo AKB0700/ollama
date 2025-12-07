@@ -291,7 +291,7 @@ func mapToTypeScriptType(jsonType string) string {
 	case "boolean":
 		return "boolean"
 	case "array":
-		return "array"
+		return "any[]"
 	case "object":
 		return "Record<string, any>"
 	case "null":
