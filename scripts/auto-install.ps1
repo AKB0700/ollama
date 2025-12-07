@@ -153,7 +153,7 @@ function Main {
     if ($existingPath) {
         Write-Warning-Message "Ollama appears to be already installed at: $existingPath"
         $response = Read-Host "Do you want to reinstall? (y/N)"
-        if ($response -notmatch '^[Yy]$') {
+        if ($response -notmatch '^[Yy]([Ee][Ss])?$') {
             Write-Status "Installation cancelled."
             return
         }
@@ -199,8 +199,16 @@ function Main {
         Write-Status "4. Check https://docs.ollama.com for documentation"
         Write-Host ""
         
-        Write-Host "Press any key to exit..."
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        # Only wait for key press if running interactively
+        try {
+            if ($Host.UI.RawUI) {
+                Write-Host "Press any key to exit..."
+                $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            }
+        }
+        catch {
+            # Non-interactive environment, skip key press
+        }
     }
     catch {
         Write-Error-Message "Installation failed: $_"
@@ -221,7 +229,14 @@ try {
 catch {
     Write-Host ""
     Write-Error-Message "Fatal error: $_"
-    Write-Host "Press any key to exit..."
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    try {
+        if ($Host.UI.RawUI) {
+            Write-Host "Press any key to exit..."
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        }
+    }
+    catch {
+        # Non-interactive environment, skip key press
+    }
     exit 1
 }

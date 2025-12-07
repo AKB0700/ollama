@@ -5,9 +5,9 @@
 
 set -eu
 
-red="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 1 || :) 2>&-)"
-green="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 2 || :) 2>&-)"
-plain="$( (/usr/bin/tput sgr0 || :) 2>&-)"
+red="$( (tput bold 2>/dev/null || :; tput setaf 1 2>/dev/null || :) 2>&-)"
+green="$( (tput bold 2>/dev/null || :; tput setaf 2 2>/dev/null || :) 2>&-)"
+plain="$( (tput sgr0 2>/dev/null || :) 2>&-)"
 
 status() { echo "${green}>>>${plain} $*" >&2; }
 error() { echo "${red}ERROR:${plain} $*"; exit 1; }
@@ -56,7 +56,7 @@ install_macos() {
     if [ -d "/Applications/Ollama.app" ]; then
         warning "Ollama is already installed at /Applications/Ollama.app"
         printf "Do you want to reinstall? (y/N): "
-        read REPLY
+        read -r REPLY
         case "$REPLY" in
             [Yy]|[Yy][Ee][Ss])
                 status "Proceeding with reinstallation..."

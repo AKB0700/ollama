@@ -27,11 +27,13 @@ curl -fsSL https://ollama.com/auto-install.sh | sh
 
 #### Windows
 
-在 PowerShell 中執行（以管理員身份）：
+在 PowerShell 中執行：
 
 ```powershell
 irm https://ollama.com/auto-install.ps1 | iex
 ```
+
+注意：安裝程序會安裝到您的使用者目錄，不需要管理員權限。
 
 或者下載並執行：
 
@@ -91,11 +93,13 @@ curl -fsSL https://ollama.com/auto-install.sh | sh
 
 #### Windows
 
-在 PowerShell 中执行（以管理员身份）：
+在 PowerShell 中执行：
 
 ```powershell
 irm https://ollama.com/auto-install.ps1 | iex
 ```
+
+注意：安装程序会安装到您的用户目录，不需要管理员权限。
 
 或者下载并执行：
 
@@ -155,11 +159,13 @@ This script will:
 
 #### Windows
 
-Run in PowerShell (as Administrator):
+Run in PowerShell:
 
 ```powershell
 irm https://ollama.com/auto-install.ps1 | iex
 ```
+
+Note: The installer will install to your user directory and does not require administrator privileges.
 
 Or download and run:
 
