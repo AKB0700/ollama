@@ -310,6 +310,12 @@ func (s *Server) GenerateHandler(c *gin.Context) {
 			return
 		}
 
+		contentType := "application/json; charset=utf-8"
+		if req.Stream != nil && *req.Stream {
+			contentType = "application/x-ndjson"
+		}
+		c.Header("Content-Type", contentType)
+
 		return
 	}
 
@@ -1994,6 +2000,12 @@ func (s *Server) ChatHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
+		contentType := "application/json; charset=utf-8"
+		if req.Stream != nil && *req.Stream {
+			contentType = "application/x-ndjson"
+		}
+		c.Header("Content-Type", contentType)
 
 		return
 	}
