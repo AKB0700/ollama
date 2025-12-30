@@ -1842,9 +1842,13 @@ func NewCLI() *cobra.Command {
 		Long: `Help provides help for any command in the application.
 Simply type ollama help [path to command] for full details.`,
 		Run: func(c *cobra.Command, args []string) {
+			if len(args) == 0 {
+				c.Root().Usage()
+				return
+			}
 			cmd, _, e := c.Root().Find(args)
 			if cmd == nil || e != nil {
-				c.Printf("Unknown help topic %#q\n", args)
+				c.Printf("Unknown help topic %q\n", strings.Join(args, " "))
 				c.Root().Usage()
 			} else {
 				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
