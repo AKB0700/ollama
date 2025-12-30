@@ -1705,8 +1705,6 @@ func NewCLI() *cobra.Command {
 		},
 	}
 
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true}) // Disable default help command since we're adding our own
-
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 
 	createCmd := &cobra.Command{
@@ -1836,6 +1834,9 @@ func NewCLI() *cobra.Command {
 		RunE:    DeleteHandler,
 	}
 
+	// Disable default help command since we're adding our own custom help command below
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
 	helpCmd := &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command",
@@ -1850,10 +1851,10 @@ Simply type ollama help [path to command] for full details.`,
 			if cmd == nil || e != nil {
 				c.Printf("Unknown help topic %q\n", strings.Join(args, " "))
 				c.Root().Usage()
-			} else {
-				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
-				cmd.Help()
+				return
 			}
+			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
+			cmd.Help()
 		},
 	}
 
