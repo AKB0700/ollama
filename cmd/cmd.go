@@ -1848,12 +1848,12 @@ Simply type ollama help [path to command] for full details.`,
 				return
 			}
 			cmd, _, e := c.Root().Find(args)
-			if cmd == nil || e != nil {
+			if e != nil {
 				c.Printf("Unknown help topic %q\n", strings.Join(args, " "))
 				c.Root().Usage()
 				return
 			}
-			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
+			cmd.InitDefaultHelpFlag() // ensure the help flag is shown
 			cmd.Help()
 		},
 	}
