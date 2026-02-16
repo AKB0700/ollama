@@ -8,21 +8,23 @@
 
 Get up and running with large language models.
 
-### macOS
-
-[Download](https://ollama.com/download/Ollama.dmg)
-
 ### Windows
 
-[Download](https://ollama.com/download/OllamaSetup.exe)
+Download and install Ollama in one click:
 
-### Linux
+[Download Ollama for Windows](https://ollama.com/download/OllamaSetup.exe)
+
+### macOS / Linux
+
+Install using the install script:
 
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-[Manual install instructions](https://docs.ollama.com/linux#manual-install)
+Or download directly:
+- [macOS](https://ollama.com/download/Ollama.dmg)
+- [Linux manual install instructions](https://docs.ollama.com/linux#manual-install)
 
 ### Docker
 
