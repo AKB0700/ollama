@@ -8,6 +8,24 @@
 
 Get up and running with large language models.
 
+## Automatic Installation (一鍵安裝)
+
+For a fully automated installation experience, use our auto-install scripts:
+
+**Linux / macOS:**
+```shell
+curl -fsSL https://ollama.com/auto-install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://ollama.com/auto-install.ps1 | iex
+```
+
+[📖 Auto-install documentation](docs/auto-install.md) | [📖 自動安裝文檔](docs/auto-install.md)
+
+## Manual Installation
+
 ### macOS
 
 [Download](https://ollama.com/download/Ollama.dmg)

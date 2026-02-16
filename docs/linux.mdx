@@ -4,7 +4,21 @@ title: Linux
 
 ## Install
 
-To install Ollama, run the following command:
+### Automatic Installation (Recommended)
+
+For a fully automated installation, run:
+
+```shell
+curl -fsSL https://ollama.com/auto-install.sh | sh
+```
+
+This script automatically detects your Linux distribution, installs Ollama, sets up the systemd service, and configures GPU support if available.
+
+See the [automatic installation guide](/auto-install) for more details.
+
+### Standard Installation
+
+To install Ollama using the standard method, run the following command:
 
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
