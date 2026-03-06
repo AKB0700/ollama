@@ -40,6 +40,8 @@ func (e StatusError) Error() string {
 	}
 }
 
+// AuthorizationError is returned when a request requires authorization but
+// the client is not authenticated or lacks sufficient permissions.
 type AuthorizationError struct {
 	StatusCode int
 	Status     string
@@ -193,6 +195,7 @@ type ChatRequest struct {
 	TopLogprobs int `json:"top_logprobs,omitempty"`
 }
 
+// Tools is a list of tools available to the model.
 type Tools []Tool
 
 func (t Tools) String() string {
@@ -220,6 +223,7 @@ type Message struct {
 	ToolCallID string      `json:"tool_call_id,omitempty"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler and normalizes the role to lowercase.
 func (m *Message) UnmarshalJSON(b []byte) error {
 	type Alias Message
 	var a Alias
@@ -232,11 +236,13 @@ func (m *Message) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// ToolCall represents a request from the model to call a tool function.
 type ToolCall struct {
 	ID       string           `json:"id,omitempty"`
 	Function ToolCallFunction `json:"function"`
 }
 
+// ToolCallFunction contains the name and arguments of a tool function call.
 type ToolCallFunction struct {
 	Index     int                       `json:"index"`
 	Name      string                    `json:"name"`
@@ -304,11 +310,13 @@ func (t *ToolCallFunctionArguments) String() string {
 	return string(bts)
 }
 
+// UnmarshalJSON implements json.Unmarshaler preserving insertion order.
 func (t *ToolCallFunctionArguments) UnmarshalJSON(data []byte) error {
 	t.om = orderedmap.New[string, any]()
 	return json.Unmarshal(data, t.om)
 }
 
+// MarshalJSON implements json.Marshaler preserving insertion order.
 func (t ToolCallFunctionArguments) MarshalJSON() ([]byte, error) {
 	if t.om == nil {
 		return []byte("{}"), nil
@@ -316,6 +324,8 @@ func (t ToolCallFunctionArguments) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.om)
 }
 
+// Tool defines a tool that can be called by the model, including its type and
+// the function definition used to describe its capabilities.
 type Tool struct {
 	Type     string       `json:"type"`
 	Items    any          `json:"items,omitempty"`
@@ -417,6 +427,7 @@ func (t *ToolPropertiesMap) ToMap() map[string]ToolProperty {
 	return t.om.ToMap()
 }
 
+// MarshalJSON implements json.Marshaler preserving insertion order.
 func (t ToolPropertiesMap) MarshalJSON() ([]byte, error) {
 	if t.om == nil {
 		return []byte("null"), nil
@@ -424,11 +435,14 @@ func (t ToolPropertiesMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.om)
 }
 
+// UnmarshalJSON implements json.Unmarshaler preserving insertion order.
 func (t *ToolPropertiesMap) UnmarshalJSON(data []byte) error {
 	t.om = orderedmap.New[string, ToolProperty]()
 	return json.Unmarshal(data, t.om)
 }
 
+// ToolProperty describes a single property in a tool's parameter schema,
+// supporting JSON Schema features such as types, nested properties, and enums.
 type ToolProperty struct {
 	AnyOf       []ToolProperty     `json:"anyOf,omitempty"`
 	Type        PropertyType       `json:"type,omitempty"`
@@ -483,6 +497,8 @@ func mapToTypeScriptType(jsonType string) string {
 	}
 }
 
+// ToolFunctionParameters describes the parameters accepted by a tool function
+// using JSON Schema conventions.
 type ToolFunctionParameters struct {
 	Type       string             `json:"type"`
 	Defs       any                `json:"$defs,omitempty"`
@@ -496,6 +512,8 @@ func (t *ToolFunctionParameters) String() string {
 	return string(bts)
 }
 
+// ToolFunction describes the callable function exposed as a tool, including its
+// name, description, and parameter schema.
 type ToolFunction struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
@@ -567,6 +585,8 @@ type DebugInfo struct {
 	ImageCount       int    `json:"image_count,omitempty"`
 }
 
+// Metrics holds performance statistics returned by the server after a
+// generation or chat request completes.
 type Metrics struct {
 	TotalDuration      time.Duration `json:"total_duration,omitempty"`
 	LoadDuration       time.Duration `json:"load_duration,omitempty"`
@@ -830,10 +850,12 @@ type ProcessModelResponse struct {
 	ContextLength int          `json:"context_length"`
 }
 
+// TokenResponse contains a single authentication token returned by the server.
 type TokenResponse struct {
 	Token string `json:"token"`
 }
 
+// CloudStatus describes the current status of cloud features on the server.
 type CloudStatus struct {
 	Disabled bool   `json:"disabled"`
 	Source   string `json:"source"`
@@ -929,6 +951,7 @@ type Tensor struct {
 	Shape []uint64 `json:"shape"`
 }
 
+// Summary prints a human-readable summary of the metrics to stderr.
 func (m *Metrics) Summary() {
 	if m.TotalDuration > 0 {
 		fmt.Fprintf(os.Stderr, "total duration:       %v\n", m.TotalDuration)
@@ -957,6 +980,8 @@ func (m *Metrics) Summary() {
 	}
 }
 
+// FromMap populates the Options fields from a map of JSON-tagged parameter names
+// to their values. Unknown keys are logged as warnings.
 func (opts *Options) FromMap(m map[string]any) error {
 	valueOpts := reflect.ValueOf(opts).Elem() // names of the fields in the options struct
 	typeOpts := reflect.TypeOf(opts).Elem()   // types of the fields in the options struct
@@ -1186,10 +1211,15 @@ func (t *ThinkValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Value)
 }
 
+// Duration is a time.Duration that supports JSON serialization as either a
+// numeric value (seconds) or a duration string (e.g. "5m"). A value of -1
+// represents an infinite duration.
 type Duration struct {
 	time.Duration
 }
 
+// MarshalJSON implements json.Marshaler. A negative duration is encoded as -1;
+// otherwise it is encoded as a quoted duration string (e.g. "5m0s").
 func (d Duration) MarshalJSON() ([]byte, error) {
 	if d.Duration < 0 {
 		return []byte("-1"), nil
@@ -1197,6 +1227,10 @@ func (d Duration) MarshalJSON() ([]byte, error) {
 	return []byte("\"" + d.Duration.String() + "\""), nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler. It accepts either a numeric value
+// (treated as seconds) or a duration string. A negative value sets the duration
+// to the maximum representable value (effectively infinite). The default value
+// when the field is absent is 5 minutes.
 func (d *Duration) UnmarshalJSON(b []byte) (err error) {
 	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
@@ -1245,52 +1279,52 @@ func FormatParams(params map[string][]string) (map[string]any, error) {
 	out := make(map[string]any)
 	// iterate params and set values based on json struct tags
 	for key, vals := range params {
-		if opt, ok := jsonOpts[key]; !ok {
+		opt, ok := jsonOpts[key]
+		if !ok {
 			return nil, fmt.Errorf("unknown parameter '%s'", key)
-		} else {
-			field := valueOpts.FieldByName(opt.Name)
-			if field.IsValid() && field.CanSet() {
-				switch field.Kind() {
-				case reflect.Float32:
-					floatVal, err := strconv.ParseFloat(vals[0], 32)
-					if err != nil {
-						return nil, fmt.Errorf("invalid float value %s", vals)
-					}
+		}
+		field := valueOpts.FieldByName(opt.Name)
+		if field.IsValid() && field.CanSet() {
+			switch field.Kind() {
+			case reflect.Float32:
+				floatVal, err := strconv.ParseFloat(vals[0], 32)
+				if err != nil {
+					return nil, fmt.Errorf("invalid float value %s", vals)
+				}
 
-					out[key] = float32(floatVal)
-				case reflect.Int:
-					intVal, err := strconv.ParseInt(vals[0], 10, 64)
-					if err != nil {
-						return nil, fmt.Errorf("invalid int value %s", vals)
-					}
+				out[key] = float32(floatVal)
+			case reflect.Int:
+				intVal, err := strconv.ParseInt(vals[0], 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid int value %s", vals)
+				}
 
-					out[key] = intVal
-				case reflect.Bool:
+				out[key] = intVal
+			case reflect.Bool:
+				boolVal, err := strconv.ParseBool(vals[0])
+				if err != nil {
+					return nil, fmt.Errorf("invalid bool value %s", vals)
+				}
+
+				out[key] = boolVal
+			case reflect.String:
+				out[key] = vals[0]
+			case reflect.Slice:
+				// TODO: only string slices are supported right now
+				out[key] = vals
+			case reflect.Pointer:
+				var b bool
+				if field.Type() == reflect.TypeOf(&b) {
 					boolVal, err := strconv.ParseBool(vals[0])
 					if err != nil {
 						return nil, fmt.Errorf("invalid bool value %s", vals)
 					}
-
-					out[key] = boolVal
-				case reflect.String:
-					out[key] = vals[0]
-				case reflect.Slice:
-					// TODO: only string slices are supported right now
-					out[key] = vals
-				case reflect.Pointer:
-					var b bool
-					if field.Type() == reflect.TypeOf(&b) {
-						boolVal, err := strconv.ParseBool(vals[0])
-						if err != nil {
-							return nil, fmt.Errorf("invalid bool value %s", vals)
-						}
-						out[key] = &boolVal
-					} else {
-						return nil, fmt.Errorf("unknown type %s for %s", field.Kind(), key)
-					}
-				default:
+					out[key] = &boolVal
+				} else {
 					return nil, fmt.Errorf("unknown type %s for %s", field.Kind(), key)
 				}
+			default:
+				return nil, fmt.Errorf("unknown type %s for %s", field.Kind(), key)
 			}
 		}
 	}

@@ -78,6 +78,7 @@ func ClientFromEnvironment() (*Client, error) {
 	}, nil
 }
 
+// NewClient creates a new [Client] using the provided base URL and HTTP client.
 func NewClient(base *url.URL, http *http.Client) *Client {
 	return &Client{
 		base: base,
@@ -469,6 +470,7 @@ func (c *Client) Disconnect(ctx context.Context, encodedKey string) error {
 	return c.do(ctx, http.MethodDelete, fmt.Sprintf("/api/user/keys/%s", encodedKey), nil, nil)
 }
 
+// Whoami returns information about the currently authenticated user.
 func (c *Client) Whoami(ctx context.Context) (*UserResponse, error) {
 	var resp UserResponse
 	if err := c.do(ctx, http.MethodPost, "/api/me", nil, &resp); err != nil {
