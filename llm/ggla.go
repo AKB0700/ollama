@@ -15,7 +15,7 @@ func (c *containerGGLA) Name() string {
 	return "ggla"
 }
 
-func (c *containerGGLA) Decode(rs io.ReadSeeker) (model, error) {
+func (c *containerGGLA) Decode(rs io.ReadSeeker) (gglaModel, error) {
 	if err := binary.Read(rs, binary.LittleEndian, &c.version); err != nil {
 		return nil, err
 	}
