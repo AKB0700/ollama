@@ -223,6 +223,11 @@ var (
 	LLMLibrary = String("OLLAMA_LLM_LIBRARY")
 	Editor     = String("OLLAMA_EDITOR")
 
+	// RunnersDir overrides the directory used to locate runner binaries.
+	RunnersDir = String("OLLAMA_RUNNERS_DIR")
+	// TmpDir overrides the default temp directory used to extract runner binaries.
+	TmpDir = String("OLLAMA_TMPDIR")
+
 	CudaVisibleDevices    = String("CUDA_VISIBLE_DEVICES")
 	HipVisibleDevices     = String("HIP_VISIBLE_DEVICES")
 	RocrVisibleDevices    = String("ROCR_VISIBLE_DEVICES")
@@ -230,6 +235,14 @@ var (
 	GpuDeviceOrdinal      = String("GPU_DEVICE_ORDINAL")
 	HsaOverrideGfxVersion = String("HSA_OVERRIDE_GFX_VERSION")
 )
+
+// IntelGPU reports whether Intel GPU support is explicitly enabled via OLLAMA_INTEL_GPU.
+var IntelGPU = Bool("OLLAMA_INTEL_GPU")
+
+// Debug reports whether debug logging is enabled (OLLAMA_DEBUG=1).
+func Debug() bool {
+	return LogLevel() <= slog.LevelDebug
+}
 
 func Uint(key string, defaultValue uint) func() uint {
 	return func() uint {
@@ -301,6 +314,9 @@ func AsMap() map[string]EnvVar {
 		"OLLAMA_EDITOR":            {"OLLAMA_EDITOR", Editor(), "Path to editor for interactive prompt editing (Ctrl+G)"},
 		"OLLAMA_NEW_ENGINE":        {"OLLAMA_NEW_ENGINE", NewEngine(), "Enable the new Ollama engine"},
 		"OLLAMA_REMOTES":           {"OLLAMA_REMOTES", Remotes(), "Allowed hosts for remote models (default \"ollama.com\")"},
+		"OLLAMA_RUNNERS_DIR":       {"OLLAMA_RUNNERS_DIR", RunnersDir(), "Override the directory used to locate runner binaries"},
+		"OLLAMA_TMPDIR":            {"OLLAMA_TMPDIR", TmpDir(), "Override temp directory used to extract runner binaries"},
+		"OLLAMA_INTEL_GPU":         {"OLLAMA_INTEL_GPU", IntelGPU(), "Enable experimental Intel GPU support"},
 
 		// Informational
 		"HTTP_PROXY":  {"HTTP_PROXY", String("HTTP_PROXY")(), "HTTP proxy"},

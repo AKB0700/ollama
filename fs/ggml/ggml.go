@@ -573,6 +573,8 @@ func Decode(rs io.ReadSeeker, maxArraySize int) (*GGML, error) {
 		c = &containerGGUF{ByteOrder: binary.LittleEndian, maxArraySize: maxArraySize}
 	case FILE_MAGIC_GGUF_BE:
 		c = &containerGGUF{ByteOrder: binary.BigEndian, maxArraySize: maxArraySize}
+	case FILE_MAGIC_GGLA:
+		c = &containerGGLA{}
 	default:
 		return nil, errors.New("invalid file magic")
 	}

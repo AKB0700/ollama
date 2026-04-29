@@ -1,4 +1,4 @@
-package llm
+package ggml
 
 import (
 	"encoding/binary"
@@ -53,7 +53,7 @@ func (llm *ggla) KV() KV {
 
 func (llm *ggla) Tensors() Tensors {
 	return Tensors{
-		Items:  llm.tensors,
+		items:  llm.tensors,
 		Offset: llm.tensorOffset,
 	}
 }
