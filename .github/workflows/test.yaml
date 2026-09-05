@@ -10,16 +10,15 @@ concurrency:
   group: ${{ github.workflow }}-$${{ github.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
       - '**/*'
       - '!docs/**'
       - '!README.md'
-
-permissions:
-  contents: read
-  pull-requests: read
 
 jobs:
   changes:
