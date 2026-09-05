@@ -2459,6 +2459,30 @@ func NewCLI() *cobra.Command {
 		RunE:    DeleteHandler,
 	}
 
+	// Disable default help command since we're adding our own custom help command below
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
+	helpCmd := &cobra.Command{
+		Use:   "help [command]",
+		Short: "Help about any command",
+		Long: `Help provides help for any command in the application.
+Simply type ollama help [path to command] for full details.`,
+		Run: func(c *cobra.Command, args []string) {
+			if len(args) == 0 {
+				c.Root().Usage()
+				return
+			}
+			cmd, _, e := c.Root().Find(args)
+			if e != nil {
+				c.Printf("Unknown help topic %q\n", strings.Join(args, " "))
+				c.Root().Usage()
+				return
+			}
+			cmd.InitDefaultHelpFlag() // ensure the help flag is shown
+			cmd.Help()
+		},
+	}
+
 	runnerCmd := &cobra.Command{
 		Use:    "runner",
 		Hidden: true,
@@ -2546,6 +2570,7 @@ func NewCLI() *cobra.Command {
 		psCmd,
 		copyCmd,
 		deleteCmd,
+		helpCmd,
 		runnerCmd,
 		gpuDiscoverCmd,
 		launch.LaunchCmd(checkServerHeartbeat, runInteractiveTUI),
