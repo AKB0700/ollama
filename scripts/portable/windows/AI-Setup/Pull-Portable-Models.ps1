@@ -1,23 +1,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$usbRoot = $PSScriptRoot
-$env:OLLAMA_MODELS = Join-Path $usbRoot 'models'
+$aiRoot = $PSScriptRoot
+$ollama = Join-Path $aiRoot 'apps\ollama\ollama.exe'
+$env:OLLAMA_MODELS = Join-Path $aiRoot 'models\ollama'
 
-function Get-OllamaCommand {
-  $cmd = Get-Command ollama -ErrorAction SilentlyContinue
-  if ($cmd) { return $cmd.Source }
+if (-not (Test-Path $ollama)) { throw '找不到可攜式 Ollama。請先執行 Launch-AI-FirstTime.cmd。' }
 
-  $portableExe = Join-Path $usbRoot 'ollama\ollama.exe'
-  if (Test-Path $portableExe) { return $portableExe }
-
-  throw '找不到 ollama 執行檔。'
-}
-
-$ollamaExe = Get-OllamaCommand
-$models = @('llama3')
-
-foreach ($model in $models) {
-  Write-Host "拉取模型: $model"
-  & $ollamaExe pull $model
-}
+$model = if ($args.Count -gt 0) { $args[0] } else { 'llama3.2' }
+& $ollama pull $model

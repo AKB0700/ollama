@@ -1,222 +1,142 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$usbRoot = $PSScriptRoot
-Set-Location $usbRoot
+# 將 AI-Setup 內的所有檔案直接複製至 H:\AI 後執行本檔。
+$aiRoot = $PSScriptRoot
+$appsRoot = Join-Path $aiRoot 'apps'
+$pythonRoot = Join-Path $appsRoot 'python'
+$ollamaRoot = Join-Path $appsRoot 'ollama'
+$comfyRoot = Join-Path $appsRoot 'ComfyUI'
 
-# Security requirements:
-# 1) Set PYTHON_EMBED_SHA256 to the official SHA256 of python-3.10.11-embed-amd64.zip
-# 2) Set GET_PIP_SHA256 to the official SHA256 of get-pip.py
-# Example (PowerShell): $env:PYTHON_EMBED_SHA256='...'; $env:GET_PIP_SHA256='...'
-
-Write-Host '[1/4] 檢查資料夾...'
-$dirs = @('input_media', 'output_result', 'python_embed', 'models', 'whisper_models', 'ollama')
-foreach ($dir in $dirs) {
-  New-Item -Path (Join-Path $usbRoot $dir) -ItemType Directory -Force | Out-Null
+function New-AIDirectories {
+  $directories = @(
+    $appsRoot, $pythonRoot, $ollamaRoot, $comfyRoot,
+    (Join-Path $aiRoot 'models\ollama'),
+    (Join-Path $aiRoot 'models\comfyui'),
+    (Join-Path $aiRoot 'cache\huggingface'),
+    (Join-Path $aiRoot 'cache\torch'),
+    (Join-Path $aiRoot 'cache\comfyui'),
+    (Join-Path $aiRoot 'input'), (Join-Path $aiRoot 'output')
+  )
+  foreach ($directory in $directories) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+  }
 }
 
-$env:OLLAMA_MODELS = Join-Path $usbRoot 'models'
-$env:HF_HOME = Join-Path $usbRoot 'whisper_models'
-$env:XDG_CACHE_HOME = Join-Path $usbRoot 'whisper_models'
-[Environment]::SetEnvironmentVariable('OLLAMA_MODELS', $env:OLLAMA_MODELS, 'User')
+function Set-PortableEnvironment {
+  $env:OLLAMA_MODELS = Join-Path $aiRoot 'models\ollama'
+  $env:HF_HOME = Join-Path $aiRoot 'cache\huggingface'
+  $env:TORCH_HOME = Join-Path $aiRoot 'cache\torch'
+  $env:COMFYUI_TEMP_DIRECTORY = Join-Path $aiRoot 'cache\comfyui'
+}
 
-function Invoke-DownloadFile {
+function Get-DownloadedFile {
+  param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)][string]$Destination)
+
+  Write-Host "下載：$Uri"
+  Invoke-WebRequest -Uri $Uri -OutFile $Destination
+}
+
+function Install-ZipIfMissing {
   param(
-    [Parameter(Mandatory = $true)][string]$Url,
-    [Parameter(Mandatory = $true)][string]$OutFile,
-    [string]$ExpectedSha256 = ''
+    [Parameter(Mandatory)][string]$TargetFile,
+    [Parameter(Mandatory)][string]$Uri,
+    [Parameter(Mandatory)][string]$Destination
   )
 
-  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  if (Test-Path $TargetFile) { return }
+  $archive = Join-Path $env:TEMP ([IO.Path]::GetRandomFileName() + '.zip')
   try {
-    Invoke-WebRequest -Uri $Url -OutFile $OutFile
-  } catch {
-    throw "下載失敗: $Url，錯誤: $($_.Exception.Message)"
+    Get-DownloadedFile -Uri $Uri -Destination $archive
+    Expand-Archive -Path $archive -DestinationPath $Destination -Force
+  } finally {
+    Remove-Item $archive -Force -ErrorAction SilentlyContinue
   }
-  if ($ExpectedSha256) {
-    $actual = (Get-FileHash -Path $OutFile -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($actual -ne $ExpectedSha256.ToLowerInvariant()) {
-      throw "檔案雜湊驗證失敗: $OutFile"
-    }
+  if (-not (Test-Path $TargetFile)) {
+    throw "安裝後仍找不到預期檔案：$TargetFile"
   }
 }
 
-function Ensure-EmbeddedPython {
-  $pythonExe = Join-Path $usbRoot 'python_embed\python.exe'
-  if (Test-Path $pythonExe) {
-    Write-Host '[2/4] 已存在可攜式 Python，跳過下載。'
-    return
+function Install-PortablePython {
+  $python = Join-Path $pythonRoot 'python.exe'
+  Install-ZipIfMissing -TargetFile $python `
+    -Uri 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip' `
+    -Destination $pythonRoot
+
+  $pth = Join-Path $pythonRoot 'python312._pth'
+  if (Test-Path $pth) {
+    (Get-Content -Path $pth) -replace '^#import site$', 'import site' | Set-Content -Path $pth -Encoding ascii
   }
 
-  Write-Host '[2/4] 下載可攜式 Python 3.10...'
-  $zipFile = Join-Path $usbRoot 'python_embed.zip'
-  if (-not $env:PYTHON_EMBED_SHA256) {
-    throw "未提供 PYTHON_EMBED_SHA256。請先執行：`$env:PYTHON_EMBED_SHA256='官方 SHA256 值'"
-  }
-  Invoke-DownloadFile `
-    -Url 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip' `
-    -OutFile $zipFile `
-    -ExpectedSha256 $env:PYTHON_EMBED_SHA256
-  Expand-Archive -Path $zipFile -DestinationPath (Join-Path $usbRoot 'python_embed') -Force
-  Remove-Item $zipFile -Force
-
-  $pthFile = Join-Path $usbRoot 'python_embed\python310._pth'
-  if (Test-Path $pthFile) {
-    (Get-Content $pthFile) -replace '#import site', 'import site' | Set-Content -Encoding ascii $pthFile
-  }
-}
-
-function Ensure-PipAndPythonDeps {
-  $pythonExe = Join-Path $usbRoot 'python_embed\python.exe'
-  $pipExe = Join-Path $usbRoot 'python_embed\Scripts\pip.exe'
-
-  if (-not (Test-Path $pipExe)) {
-    $getPip = Join-Path $usbRoot 'python_embed\get-pip.py'
-    Write-Host '[3/4] 安裝 pip...'
-    if (-not $env:GET_PIP_SHA256) {
-      throw "未提供 GET_PIP_SHA256。請先執行：`$env:GET_PIP_SHA256='官方 SHA256 值'"
-    }
-    Invoke-DownloadFile -Url 'https://bootstrap.pypa.io/get-pip.py' -OutFile $getPip -ExpectedSha256 $env:GET_PIP_SHA256
-    & $pythonExe $getPip --no-warn-script-location
-    Remove-Item $getPip -Force
-  }
-
-  Write-Host '[3/4] 安裝 AI Python 依賴...'
-  & $pythonExe -m pip install --no-warn-script-location requests tqdm openai-whisper
-  $hasNvidia = [bool](Get-Command nvidia-smi -ErrorAction SilentlyContinue)
-  if ($hasNvidia) {
+  if (-not (Test-Path (Join-Path $pythonRoot 'Scripts\pip.exe'))) {
+    $getPip = Join-Path $env:TEMP 'get-pip.py'
     try {
-      & $pythonExe -m pip install --no-warn-script-location torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-      return
-    } catch {
-      Write-Host 'CUDA 版本安裝失敗，改安裝 CPU 版本 PyTorch...'
+      Get-DownloadedFile -Uri 'https://bootstrap.pypa.io/get-pip.py' -Destination $getPip
+      & $python $getPip --no-warn-script-location
+    } finally {
+      Remove-Item $getPip -Force -ErrorAction SilentlyContinue
     }
-  } else {
-    Write-Host '未偵測到 NVIDIA 環境，安裝 CPU 版本 PyTorch...'
   }
-
-  & $pythonExe -m pip install --no-warn-script-location torch torchvision torchaudio
+  return $python
 }
 
-function Test-OllamaSetupSignature {
-  param([Parameter(Mandatory = $true)][string]$FilePath)
-  $sig = Get-AuthenticodeSignature -FilePath $FilePath
-  if ($sig.Status -ne 'Valid') {
-    return $false
+function Test-NvidiaDriver {
+  $nvidiaSmi = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
+  if (-not $nvidiaSmi) {
+    Write-Host '找不到 NVIDIA 驅動程式。即將開啟 NVIDIA 官方下載頁面；安裝與重新開機後請再次執行。' -ForegroundColor Yellow
+    Start-Process 'https://www.nvidia.com/Download/index.aspx'
+    throw 'NVIDIA 驅動程式是 GPU 加速的必要條件。'
   }
-  return $sig.SignerCertificate.Subject -match '(^|, )O=Ollama Inc\.(,|$)'
+  $driver = & $nvidiaSmi.Source '--query-gpu=name,driver_version' '--format=csv,noheader' 2>$null
+  if ($LASTEXITCODE -ne 0) { throw 'nvidia-smi 執行失敗，請更新 NVIDIA 驅動程式。' }
+  Write-Host "已偵測 NVIDIA GPU：$driver"
 }
 
-function Ensure-Ollama {
-  Write-Host '[4/4] 檢查 Ollama...'
-  $existing = Get-Command ollama -ErrorAction SilentlyContinue
-  if ($existing) {
-    Write-Host '已偵測到系統 Ollama。'
-    return
-  }
-
-  $setup = Join-Path $usbRoot 'ollama\OllamaSetup.exe'
-  if (-not (Test-Path $setup)) {
-    Write-Host '下載官方 Ollama 安裝程式...'
-    Invoke-DownloadFile -Url 'https://ollama.com/download/OllamaSetup.exe' -OutFile $setup
-  }
-
-  if (-not (Test-OllamaSetupSignature -FilePath $setup)) {
-    throw 'Ollama 安裝程式簽章驗證失敗。'
-  }
-
-  Write-Host '安裝 Ollama...'
-  $installLog = Join-Path $usbRoot 'ollama\install.log'
-  $proc = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /LOG=`"$installLog`"" -Wait -PassThru
-  if ($proc.ExitCode -ne 0) {
-    throw "Ollama 安裝失敗，exit code: $($proc.ExitCode)"
-  }
+function Install-Ollama {
+  Install-ZipIfMissing -TargetFile (Join-Path $ollamaRoot 'ollama.exe') `
+    -Uri 'https://ollama.com/download/ollama-windows-amd64.zip' -Destination $ollamaRoot
 }
 
-function Write-AICoreScript {
-  $script = @'
-# -*- coding: utf-8 -*-
-import os
-import torch
-import whisper
-import requests
+function Install-ComfyUI {
+  $mainPy = Join-Path $comfyRoot 'main.py'
+  if (-not (Test-Path $mainPy)) {
+    $archive = Join-Path $env:TEMP ([IO.Path]::GetRandomFileName() + '.zip')
+    $extractRoot = Join-Path $env:TEMP ([IO.Path]::GetRandomFileName())
+    try {
+      Get-DownloadedFile -Uri 'https://github.com/Comfy-Org/ComfyUI/archive/refs/heads/master.zip' -Destination $archive
+      Expand-Archive -Path $archive -DestinationPath $extractRoot -Force
+      $source = Get-ChildItem -Path $extractRoot -Directory | Select-Object -First 1
+      if (-not $source) { throw 'ComfyUI 壓縮檔內容無效。' }
+      Get-ChildItem -Path $source.FullName -Force | Move-Item -Destination $comfyRoot -Force
+    } finally {
+      Remove-Item $archive -Force -ErrorAction SilentlyContinue
+      Remove-Item $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
 
-USB_ROOT = os.path.dirname(os.path.abspath(__file__))
-INPUT_DIR = os.path.join(USB_ROOT, "input_media")
-OUTPUT_DIR = os.path.join(USB_ROOT, "output_result")
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3"
-# 可透過環境變數覆寫：
-#   WHISPER_MODEL: 例如 base/small/medium/large-v3
-#   OLLAMA_TIMEOUT_SECONDS: Ollama API timeout 秒數
-WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base")
-OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "180"))
-MAX_PROMPT_LENGTH = 20000  # 超過會被截斷，避免單次請求過長導致本地 API 超時或記憶體壓力
-
-os.environ["HF_HOME"] = os.path.join(USB_ROOT, "whisper_models")
-os.environ["XDG_CACHE_HOME"] = os.path.join(USB_ROOT, "whisper_models")
-
-os.makedirs(INPUT_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-PROCESSED_DIR = os.path.join(INPUT_DIR, "processed")
-os.makedirs(PROCESSED_DIR, exist_ok=True)
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"🎬 啟動本地 Whisper... 硬體加速偵測: {device.upper()}")
-if device == "cpu":
-    print("⚠️ 警告：這台電腦未偵測到 NVIDIA 顯卡加速，將使用 CPU 慢速運算。")
-
-try:
-    model = whisper.load_model(WHISPER_MODEL, device=device)
-except Exception as e:
-    print(f"模型 {WHISPER_MODEL} 載入失敗，正在改用 base。錯誤: {e}")
-    model = whisper.load_model("base", device=device)
-
-files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith((".mp4", ".mp3", ".m4a", ".wav", ".mkv"))]
-if not files:
-    print("\n[等待中] 請將影音檔案放入 input_media 後重新執行。")
-else:
-    for file_name in files:
-        file_path = os.path.join(INPUT_DIR, file_name)
-        base_name = os.path.splitext(file_name)[0]
-        print(f"\n🚀 正在處理: {file_name}")
-        try:
-            result = model.transcribe(file_path)
-            raw_text = result["text"]
-            safe_text = raw_text.replace("\x00", "")[:MAX_PROMPT_LENGTH]
-            with open(os.path.join(OUTPUT_DIR, f"{base_name}_原始逐字稿.txt"), "w", encoding="utf-8") as f:
-                f.write(raw_text)
-            payload = {
-                "model": OLLAMA_MODEL,
-                "prompt": f"請將以下文本翻譯並潤飾為流暢的繁體中文（台灣商務口吻）：\n\n{safe_text}",
-                "stream": False,
-            }
-            res = requests.post(OLLAMA_API_URL, json=payload, timeout=OLLAMA_TIMEOUT)
-            res.raise_for_status()
-            trans_text = res.json().get("response", "").strip()
-        except Exception as e:
-            err = str(e)
-            if "timed out" in err.lower():
-                trans_text = f"Ollama 請求逾時（timeout={OLLAMA_TIMEOUT}s），僅保留逐字稿。錯誤: {err}"
-            elif "connection" in err.lower() or "refused" in err.lower():
-                trans_text = f"Ollama 連線失敗，請確認 ollama serve 已啟動。錯誤: {err}"
-            else:
-                trans_text = f"Ollama API 呼叫失敗，僅保留逐字稿。錯誤: {err}"
-        with open(os.path.join(OUTPUT_DIR, f"{base_name}_最終繁中翻譯.txt"), "w", encoding="utf-8") as f:
-            f.write(trans_text)
-        os.rename(file_path, os.path.join(PROCESSED_DIR, file_name))
-    print("\n🎉 隨身碟內所有影音檔案已全自動處理完畢！")
-'@
-
-  Set-Content -Path (Join-Path $usbRoot 'ai_core.py') -Value $script -Encoding utf8
+  @"
+ollama:
+  base_path: $aiRoot
+  checkpoints: models/comfyui/checkpoints
+  vae: models/comfyui/vae
+  loras: models/comfyui/loras
+  controlnet: models/comfyui/controlnet
+  clip: models/comfyui/text_encoders
+  diffusion_models: models/comfyui/diffusion_models
+"@ | Set-Content -Path (Join-Path $comfyRoot 'extra_model_paths.yaml') -Encoding utf8
 }
 
-Ensure-EmbeddedPython
-Ensure-PipAndPythonDeps
-Ensure-Ollama
-Write-AICoreScript
+New-AIDirectories
+Set-PortableEnvironment
+Test-NvidiaDriver
+$python = Install-PortablePython
+Install-Ollama
+Install-ComfyUI
 
-& (Join-Path $usbRoot 'Pull-Portable-Models.ps1')
-& (Join-Path $usbRoot 'Create-Desktop-Shortcuts.ps1')
+Write-Host '安裝 ComfyUI 相依套件與 CUDA 12.8 版 PyTorch，這可能需要幾分鐘...'
+& $python -m pip install --upgrade pip
+& $python -m pip install --no-warn-script-location -r (Join-Path $comfyRoot 'requirements.txt')
+& $python -m pip install --no-warn-script-location --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu128
+& $python -c 'import torch; assert torch.cuda.is_available(), "PyTorch 無法使用 CUDA"; print("PyTorch CUDA:", torch.cuda.get_device_name(0))'
 
-Write-Host '初始化完成。'
+Write-Host '可攜式 Ollama 與 ComfyUI 初始化完成。'
