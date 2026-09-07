@@ -6,11 +6,17 @@ $comfyRoot = Join-Path $aiRoot 'apps\ComfyUI'
 $python = Join-Path $aiRoot 'apps\python\python.exe'
 $ollamaRoot = Join-Path $aiRoot 'apps\ollama'
 $ollamaExe = Join-Path $ollamaRoot 'ollama.exe'
+$whisperJavRoot = Join-Path $aiRoot 'apps\WhisperJAV'
 
 $env:OLLAMA_MODELS = Join-Path $aiRoot 'models\ollama'
 $env:HF_HOME = Join-Path $aiRoot 'cache\huggingface'
 $env:TORCH_HOME = Join-Path $aiRoot 'cache\torch'
 $env:COMFYUI_TEMP_DIRECTORY = Join-Path $aiRoot 'cache\comfyui'
+$env:APPDATA = Join-Path $aiRoot 'cache\whisperjav\AppData\Roaming'
+$env:LOCALAPPDATA = Join-Path $aiRoot 'cache\whisperjav\AppData\Local'
+$env:HOME = $aiRoot
+$env:TORCH_HOME = Join-Path $aiRoot 'cache\torch'
+New-Item -ItemType Directory -Path $env:APPDATA, $env:LOCALAPPDATA -Force | Out-Null
 
 if (-not (Test-Path $ollamaExe) -or -not (Test-Path $python) -or -not (Test-Path (Join-Path $comfyRoot 'main.py'))) {
   throw '找不到 SSD 上的可攜式元件。請先執行 Launch-AI-FirstTime.cmd。'

@@ -7,15 +7,18 @@ $appsRoot = Join-Path $aiRoot 'apps'
 $pythonRoot = Join-Path $appsRoot 'python'
 $ollamaRoot = Join-Path $appsRoot 'ollama'
 $comfyRoot = Join-Path $appsRoot 'ComfyUI'
+$whisperJavRoot = Join-Path $appsRoot 'WhisperJAV'
 
 function New-AIDirectories {
   $directories = @(
-    $appsRoot, $pythonRoot, $ollamaRoot, $comfyRoot,
+    $appsRoot, $pythonRoot, $ollamaRoot, $comfyRoot, $whisperJavRoot,
     (Join-Path $aiRoot 'models\ollama'),
     (Join-Path $aiRoot 'models\comfyui'),
     (Join-Path $aiRoot 'cache\huggingface'),
     (Join-Path $aiRoot 'cache\torch'),
     (Join-Path $aiRoot 'cache\comfyui'),
+    (Join-Path $aiRoot 'cache\whisperjav'),
+    (Join-Path $aiRoot 'cache\whisper'),
     (Join-Path $aiRoot 'input'), (Join-Path $aiRoot 'output')
   )
   foreach ($directory in $directories) {
@@ -129,12 +132,34 @@ ollama:
 "@ | Set-Content -Path (Join-Path $comfyRoot 'extra_model_paths.yaml') -Encoding utf8
 }
 
+function Install-WhisperJAV {
+  $executable = Join-Path $whisperJavRoot 'WhisperJAV.exe'
+  if (Test-Path $executable) { return }
+
+  $installer = Join-Path $env:TEMP 'WhisperJAV-1.9.0-Windows-x86_64.exe'
+  try {
+    Get-DownloadedFile `
+      -Uri 'https://github.com/meizhong986/WhisperJAV/releases/download/v1.9.0/WhisperJAV-1.9.0-Windows-x86_64.exe' `
+      -Destination $installer
+    $actualHash = (Get-FileHash -Path $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+    $expectedHash = '13d16fab9c8faaa87bc5f1462df75b60f691d2740051a643718fff658b3cb95e'
+    if ($actualHash -ne $expectedHash) { throw 'WhisperJAV 安裝檔 SHA256 驗證失敗。' }
+
+    $process = Start-Process -FilePath $installer -ArgumentList "/S /D=$whisperJavRoot" -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "WhisperJAV 安裝失敗，結束代碼：$($process.ExitCode)" }
+  } finally {
+    Remove-Item $installer -Force -ErrorAction SilentlyContinue
+  }
+  if (-not (Test-Path $executable)) { throw 'WhisperJAV 安裝完成後找不到執行檔。' }
+}
+
 New-AIDirectories
 Set-PortableEnvironment
 $hasNvidia = Test-NvidiaDriver
 $python = Install-PortablePython
 Install-Ollama
 Install-ComfyUI
+Install-WhisperJAV
 
 Write-Host '安裝 ComfyUI 相依套件與 PyTorch，這可能需要幾分鐘...'
 & $python -m pip install --upgrade pip
