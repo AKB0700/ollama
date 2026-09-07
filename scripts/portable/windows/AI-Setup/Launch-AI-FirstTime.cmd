@@ -6,13 +6,6 @@ cls
 set "USB_DIR=%~dp0"
 cd /d "%USB_DIR%"
 
-net session >nul 2>&1
-if not "%errorlevel%"=="0" (
-  echo [系統] CUDA Toolkit 安裝需要系統管理員權限，正在重新啟動...
-  powershell -NoProfile -Command "Start-Process -FilePath '%ComSpec%' -ArgumentList '/c ""%~f0""' -Verb RunAs"
-  exit /b 0
-)
-
 echo ============================================================
 echo      🚀 隨身碟 AI 工作流 - 跨電腦一鍵部署與自動化啟動 🚀
 echo ============================================================
