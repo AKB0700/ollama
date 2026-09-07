@@ -5,12 +5,12 @@ $ErrorActionPreference = 'Stop'
 $aiRoot = $PSScriptRoot
 $appsRoot = Join-Path $aiRoot 'apps'
 $pythonRoot = Join-Path $appsRoot 'python'
-$ollamaRoot = Join-Path $appsRoot 'ollama'
 $comfyRoot = Join-Path $appsRoot 'ComfyUI'
+$installerRoot = Join-Path $appsRoot 'installers'
 
 function New-AIDirectories {
   $directories = @(
-    $appsRoot, $pythonRoot, $ollamaRoot, $comfyRoot,
+    $appsRoot, $pythonRoot, $comfyRoot, $installerRoot,
     (Join-Path $aiRoot 'models\ollama'),
     (Join-Path $aiRoot 'models\comfyui'),
     (Join-Path $aiRoot 'cache\huggingface'),
@@ -28,6 +28,7 @@ function Set-PortableEnvironment {
   $env:HF_HOME = Join-Path $aiRoot 'cache\huggingface'
   $env:TORCH_HOME = Join-Path $aiRoot 'cache\torch'
   $env:COMFYUI_TEMP_DIRECTORY = Join-Path $aiRoot 'cache\comfyui'
+  [Environment]::SetEnvironmentVariable('OLLAMA_MODELS', $env:OLLAMA_MODELS, 'User')
 }
 
 function Get-DownloadedFile {
@@ -83,18 +84,50 @@ function Install-PortablePython {
 function Test-NvidiaDriver {
   $nvidiaSmi = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
   if (-not $nvidiaSmi) {
-    Write-Host '找不到 NVIDIA 驅動程式。即將開啟 NVIDIA 官方下載頁面；安裝與重新開機後請再次執行。' -ForegroundColor Yellow
+    Write-Host '找不到 NVIDIA Studio Driver。即將開啟 NVIDIA 官方驅動下載頁面；請選擇 Studio Driver、完成安裝與重新開機後再次執行。' -ForegroundColor Yellow
     Start-Process 'https://www.nvidia.com/Download/index.aspx'
-    throw 'NVIDIA 驅動程式是 GPU 加速的必要條件。'
+    throw 'NVIDIA Studio Driver 是 GPU 加速的必要條件。'
   }
   $driver = & $nvidiaSmi.Source '--query-gpu=name,driver_version' '--format=csv,noheader' 2>$null
   if ($LASTEXITCODE -ne 0) { throw 'nvidia-smi 執行失敗，請更新 NVIDIA 驅動程式。' }
   Write-Host "已偵測 NVIDIA GPU：$driver"
 }
 
+function Install-NvidiaCudaToolkit {
+  $nvcc = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin\nvcc.exe'
+  if (Test-Path $nvcc) {
+    Write-Host "已安裝 CUDA Toolkit：$(& $nvcc --version | Select-Object -Last 1)"
+    return
+  }
+
+  $installer = Join-Path $installerRoot 'cuda_12.8.1_windows.exe'
+  if (-not (Test-Path $installer)) {
+    Get-DownloadedFile `
+      -Uri 'https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda_12.8.1_570.65_windows.exe' `
+      -Destination $installer
+  }
+  Write-Host '安裝 CUDA Toolkit 12.8.1...'
+  $process = Start-Process -FilePath $installer -ArgumentList '-s cuda_toolkit' -Wait -PassThru
+  if ($process.ExitCode -ne 0) { throw "CUDA Toolkit 安裝失敗，結束代碼：$($process.ExitCode)" }
+}
+
 function Install-Ollama {
-  Install-ZipIfMissing -TargetFile (Join-Path $ollamaRoot 'ollama.exe') `
-    -Uri 'https://ollama.com/download/ollama-windows-amd64.zip' -Destination $ollamaRoot
+  $ollama = Get-Command ollama.exe -ErrorAction SilentlyContinue
+  if ($ollama) {
+    Write-Host "已安裝官方 Ollama：$($ollama.Source)"
+    return
+  }
+
+  $installer = Join-Path $installerRoot 'OllamaSetup.exe'
+  if (-not (Test-Path $installer)) {
+    Get-DownloadedFile -Uri 'https://ollama.com/download/OllamaSetup.exe' -Destination $installer
+  }
+  $signature = Get-AuthenticodeSignature -FilePath $installer
+  if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Ollama Inc\.') {
+    throw 'Ollama 安裝程式的 Authenticode 簽章無效。'
+  }
+  $process = Start-Process -FilePath $installer -ArgumentList '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES' -Wait -PassThru
+  if ($process.ExitCode -ne 0) { throw "Ollama 安裝失敗，結束代碼：$($process.ExitCode)" }
 }
 
 function Install-ComfyUI {
@@ -129,6 +162,7 @@ ollama:
 New-AIDirectories
 Set-PortableEnvironment
 Test-NvidiaDriver
+Install-NvidiaCudaToolkit
 $python = Install-PortablePython
 Install-Ollama
 Install-ComfyUI
