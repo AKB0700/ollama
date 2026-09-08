@@ -122,12 +122,14 @@ func GetManifestPath() (string, error) {
 	return path, nil
 }
 
+// digestPattern matches valid sha256 digests. Compiled once at package init
+// since GetBlobsPath is called on every blob path resolution (per layer, per
+// request) and recompiling the regex on each call is wasted work.
+var digestPattern = regexp.MustCompile("^sha256[:-][0-9a-fA-F]{64}$")
+
 func GetBlobsPath(digest string) (string, error) {
 	// only accept actual sha256 digests
-	pattern := "^sha256[:-][0-9a-fA-F]{64}$"
-	re := regexp.MustCompile(pattern)
-
-	if digest != "" && !re.MatchString(digest) {
+	if digest != "" && !digestPattern.MatchString(digest) {
 		return "", ErrInvalidDigestFormat
 	}
 
