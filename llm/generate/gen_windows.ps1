@@ -111,11 +111,13 @@ function Get-PatchFilePaths {
     $oldPath = $null
     Get-Content $PatchFile | ForEach-Object {
         if ($_ -match '^--- ') {
-            $oldPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+            $oldPath = (($_ -replace '^---\s+', '') -split '\s+', 2)[0]
+            $oldPath = ($oldPath -replace '^[ab]/', '')
             return
         }
         if ($_ -match '^\+\+\+ ') {
-            $newPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+            $newPath = (($_ -replace '^\+\+\+\s+', '') -split '\s+', 2)[0]
+            $newPath = ($newPath -replace '^[ab]/', '')
             if ($ForCleanup -and $newPath -eq '/dev/null') {
                 return $oldPath
             }
