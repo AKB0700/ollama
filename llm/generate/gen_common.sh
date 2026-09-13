@@ -90,7 +90,7 @@ apply_patches() {
                 if [ -e "${LLAMACPP_DIR}/${file}" ]; then
                     (cd "${LLAMACPP_DIR}" && git checkout "${file}")
                 fi
-            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
+            done < <(grep "^+++ " "${patch}" | sed -e 's/^+++ //' | cut -f1 | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
         done
         for patch in ../patches/*.diff; do
             (cd "${LLAMACPP_DIR}" && git apply "${patch}")
@@ -133,7 +133,7 @@ cleanup() {
     if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
         return
     fi
-    (cd "${LLAMACPP_DIR}/" && git checkout CMakeLists.txt)
+    (cd "${LLAMACPP_DIR}/" && git checkout HEAD -- CMakeLists.txt)
 
     if compgen -G "../patches/*.diff" > /dev/null; then
         for patch in ../patches/*.diff; do
