@@ -54,16 +54,20 @@ git_module_setup() {
         echo "Cleaning up old submodule"
         rm -rf ${LLAMACPP_DIR}
     fi
-    git submodule init
+    git submodule init || return 1
     if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
-        git submodule update --force ${LLAMACPP_DIR}
+        git submodule update --force ${LLAMACPP_DIR} || return 1
     else
         echo "llama.cpp is vendored, skipping submodule update"
     fi
     if [ ! -d "${LLAMACPP_DIR}" ] || [ ! -f "${LLAMACPP_DIR}/CMakeLists.txt" ]; then
-        echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
-        SKIP_RUNNER_GENERATE=1
-        return
+        if [ -d ../../llama/llama.cpp ]; then
+            echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
+            SKIP_RUNNER_GENERATE=1
+            return
+        fi
+        echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}"
+        return 1
     fi
 
 }
