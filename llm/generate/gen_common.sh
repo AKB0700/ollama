@@ -86,12 +86,12 @@ apply_patches() {
     if compgen -G "../patches/*.diff" > /dev/null; then
         # apply temporary patches until fix is upstream
         for patch in ../patches/*.diff; do
-            for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
+            while IFS= read -r file; do
                 (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-            done
+            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | cut -f2- -d/)
         done
         for patch in ../patches/*.diff; do
-            (cd ${LLAMACPP_DIR} && git apply ${patch})
+            (cd "${LLAMACPP_DIR}" && git apply "${patch}")
         done
     fi
 }
@@ -135,9 +135,9 @@ cleanup() {
 
     if compgen -G "../patches/*.diff" > /dev/null; then
         for patch in ../patches/*.diff; do
-            for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
+            while IFS= read -r file; do
                 (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-            done
+            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | cut -f2- -d/)
         done
     fi
 }
