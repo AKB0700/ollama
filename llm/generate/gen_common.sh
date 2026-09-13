@@ -87,10 +87,8 @@ apply_patches() {
         # apply temporary patches until fix is upstream
         for patch in ../patches/*.diff; do
             while IFS= read -r file; do
-                if [ -e "${LLAMACPP_DIR}/${file}" ]; then
-                    (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-                fi
-            done < <(grep "^+++ " "${patch}" | sed -e 's/^+++ //' | cut -f1 | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
+                (cd "${LLAMACPP_DIR}" && git checkout HEAD -- "${file}" >/dev/null 2>&1 || true)
+            done < <(awk '/^--- /{old=$2; sub(/[[:space:]].*$/, "", old); sub(/^[ab]\//, "", old)} /^\+\+\+ /{new=$2; sub(/[[:space:]].*$/, "", new); sub(/^[ab]\//, "", new); if (new == "/dev/null") print old; else print new}' "${patch}" | grep -Fvx "/dev/null" | sort -u)
         done
         for patch in ../patches/*.diff; do
             (cd "${LLAMACPP_DIR}" && git apply "${patch}")

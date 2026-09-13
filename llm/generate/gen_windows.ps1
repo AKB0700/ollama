@@ -138,9 +138,9 @@ function apply_patches {
     # Apply temporary patches until fix is upstream
     $patches = Get-ChildItem "../patches/*.diff"
     foreach ($patch in $patches) {
-        $filePaths = Get-PatchFilePaths -PatchFile $patch.FullName
+        $filePaths = Get-PatchFilePaths -PatchFile $patch.FullName -ForCleanup
         foreach ($file in $filePaths) {
-            git -C "${script:llamacppDir}" checkout $file
+            git -C "${script:llamacppDir}" checkout HEAD -- $file *> $null
         }
     }
 
