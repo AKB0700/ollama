@@ -187,17 +187,25 @@ function cleanup {
     }
     $patches = Get-ChildItem "../patches/*.diff"
     foreach ($patch in $patches) {
-        # Extract file paths from the patch file
-        $filePaths = Get-Content $patch.FullName | Where-Object { $_ -match '^\+\+\+ ' } | ForEach-Object {
-            $parts = $_ -split ' '
-            ($parts[1] -split '/', 2)[1]
-        }
+        $oldPath = $null
+        $filePaths = Get-Content $patch.FullName | ForEach-Object {
+            if ($_ -match '^--- ') {
+                $oldPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+                return
+            }
+            if ($_ -match '^\+\+\+ ') {
+                $newPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+                if ($newPath -eq '/dev/null') {
+                    return $oldPath
+                }
+                return $newPath
+            }
+        } | Where-Object { $_ -and $_ -ne '/dev/null' } | Sort-Object -Unique
 
-        # Checkout each file
-        foreach ($file in $filePaths) {            
-            git -C "${script:llamacppDir}" checkout $file
+        foreach ($file in $filePaths) {
+            git -C "${script:llamacppDir}" checkout HEAD -- $file *> $null
         }
-        git -C "${script:llamacppDir}" checkout CMakeLists.txt
+        git -C "${script:llamacppDir}" checkout HEAD -- CMakeLists.txt *> $null
     }
 }
 
