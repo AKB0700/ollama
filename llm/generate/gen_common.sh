@@ -91,7 +91,7 @@ apply_patches() {
                     continue
                 fi
                 (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | cut -f2- -d/)
+            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##')
         done
         for patch in ../patches/*.diff; do
             (cd "${LLAMACPP_DIR}" && git apply "${patch}")
@@ -143,7 +143,7 @@ cleanup() {
                     continue
                 fi
                 (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | cut -f2- -d/)
+            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##')
         done
     fi
 }
