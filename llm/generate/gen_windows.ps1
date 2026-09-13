@@ -76,19 +76,25 @@ function init_vars {
 
 function git_module_setup {
     # TODO add flags to skip the init/patch logic to make it easier to mod llama.cpp code in-repo
-    if (!(Test-Path -Path "${script:llamacppDir}") -or !(Test-Path -Path "${script:llamacppDir}/CMakeLists.txt")) {
-        $script:skipRunnerGenerate = $true
-        write-host "llama.cpp source is unavailable at ${script:llamacppDir}, skipping LLM runner generation"
-        return
+    $hasSubmodulePath = $false
+    if (Test-Path "../../.gitmodules") {
+        $submodulePaths = & git config --file "../../.gitmodules" --get-regexp '^submodule\..*\.path$' 2>$null | ForEach-Object {
+            ($_ -split '\s+', 2)[1]
+        }
+        $hasSubmodulePath = $submodulePaths -contains "llm/llama.cpp"
     }
-    & git submodule status -- "${script:llamacppDir}" *> $null
-    if ($LASTEXITCODE -eq 0) {
+    if ($hasSubmodulePath) {
         & git submodule init
         if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
         & git submodule update --force "${script:llamacppDir}"
         if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
     } else {
         write-host "llama.cpp is vendored, skipping submodule update"
+    }
+    if (!(Test-Path -Path "${script:llamacppDir}") -or !(Test-Path -Path "${script:llamacppDir}/CMakeLists.txt")) {
+        $script:skipRunnerGenerate = $true
+        write-host "llama.cpp source is unavailable at ${script:llamacppDir}, skipping LLM runner generation"
+        return
     }
 }
 
