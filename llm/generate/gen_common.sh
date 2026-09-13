@@ -49,6 +49,7 @@ git_module_setup() {
         echo "Skipping submodule initialization"
         return
     fi
+    local has_llama_submodule=0
     # Make sure the tree is clean after the directory moves
     if [ -d "${LLAMACPP_DIR}/gguf" ]; then
         echo "Cleaning up old submodule"
@@ -56,12 +57,13 @@ git_module_setup() {
     fi
     git submodule init || return 1
     if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
+        has_llama_submodule=1
         git submodule update --force ${LLAMACPP_DIR} || return 1
     else
         echo "llama.cpp is vendored, skipping submodule update"
     fi
     if [ ! -d "${LLAMACPP_DIR}" ] || [ ! -f "${LLAMACPP_DIR}/CMakeLists.txt" ]; then
-        if [ -d ../../llama/llama.cpp ]; then
+        if [ ${has_llama_submodule} -eq 0 ] && [ -d ../../llama/llama.cpp ]; then
             echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
             SKIP_RUNNER_GENERATE=1
             return
