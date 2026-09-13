@@ -83,9 +83,9 @@ function git_module_setup {
         }
         $hasSubmodulePath = $submodulePaths -contains "llm/llama.cpp"
     }
+    & git submodule init
+    if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
     if ($hasSubmodulePath) {
-        & git submodule init
-        if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
         & git submodule update --force "${script:llamacppDir}"
         if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
     } else {

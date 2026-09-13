@@ -54,8 +54,8 @@ git_module_setup() {
         echo "Cleaning up old submodule"
         rm -rf ${LLAMACPP_DIR}
     fi
+    git submodule init
     if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
-        git submodule init
         git submodule update --force ${LLAMACPP_DIR}
     else
         echo "llama.cpp is vendored, skipping submodule update"
