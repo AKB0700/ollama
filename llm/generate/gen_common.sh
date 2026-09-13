@@ -87,7 +87,7 @@ apply_patches() {
         # apply temporary patches until fix is upstream
         for patch in ../patches/*.diff; do
             for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
-                (cd ${LLAMACPP_DIR}; git checkout ${file})
+                (cd "${LLAMACPP_DIR}" && git checkout "${file}")
             done
         done
         for patch in ../patches/*.diff; do
@@ -136,7 +136,7 @@ cleanup() {
     if compgen -G "../patches/*.diff" > /dev/null; then
         for patch in ../patches/*.diff; do
             for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
-                (cd ${LLAMACPP_DIR}; git checkout ${file})
+                (cd "${LLAMACPP_DIR}" && git checkout "${file}")
             done
         done
     fi
