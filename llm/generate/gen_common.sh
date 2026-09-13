@@ -87,11 +87,10 @@ apply_patches() {
         # apply temporary patches until fix is upstream
         for patch in ../patches/*.diff; do
             while IFS= read -r file; do
-                if [ ! -e "${LLAMACPP_DIR}/${file}" ]; then
-                    continue
+                if [ -e "${LLAMACPP_DIR}/${file}" ]; then
+                    (cd "${LLAMACPP_DIR}" && git checkout "${file}")
                 fi
-                (cd "${LLAMACPP_DIR}" && git checkout "${file}")
-            done < <(grep -E "^(---|\\+\\+\\+) " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
+            done < <(grep "^+++ " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
         done
         for patch in ../patches/*.diff; do
             (cd "${LLAMACPP_DIR}" && git apply "${patch}")
@@ -139,10 +138,7 @@ cleanup() {
     if compgen -G "../patches/*.diff" > /dev/null; then
         for patch in ../patches/*.diff; do
             while IFS= read -r file; do
-                if [ ! -e "${LLAMACPP_DIR}/${file}" ]; then
-                    continue
-                fi
-                (cd "${LLAMACPP_DIR}" && git checkout "${file}")
+                (cd "${LLAMACPP_DIR}" && git checkout -- "${file}" >/dev/null 2>&1 || true)
             done < <(grep -E "^(---|\\+\\+\\+) " "${patch}" | cut -f2 -d' ' | sed -e 's#^[ab]/##' | grep -Fvx "/dev/null" | sort -u)
         done
     fi
