@@ -65,7 +65,7 @@ git_module_setup() {
     if [ ! -d "${LLAMACPP_DIR}" ] || [ ! -f "${LLAMACPP_DIR}/CMakeLists.txt" ]; then
         if [ ${has_llama_submodule} -eq 0 ]; then
             echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
-            SKIP_RUNNER_GENERATE=1
+            export SKIP_RUNNER_GENERATE=1
             return
         fi
         echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}"
@@ -83,7 +83,7 @@ apply_patches() {
         echo 'add_subdirectory(../ext_server ext_server) # ollama' >>"${LLAMACPP_DIR}/CMakeLists.txt"
     fi
 
-    if [ -n "$(ls -A ../patches/*.diff)" ]; then
+    if compgen -G "../patches/*.diff" > /dev/null; then
         # apply temporary patches until fix is upstream
         for patch in ../patches/*.diff; do
             for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
@@ -133,7 +133,7 @@ cleanup() {
     fi
     (cd "${LLAMACPP_DIR}/" && git checkout CMakeLists.txt)
 
-    if [ -n "$(ls -A ../patches/*.diff)" ]; then
+    if compgen -G "../patches/*.diff" > /dev/null; then
         for patch in ../patches/*.diff; do
             for file in $(grep "^+++ " ${patch} | cut -f2 -d' ' | cut -f2- -d/); do
                 (cd ${LLAMACPP_DIR}; git checkout ${file})
