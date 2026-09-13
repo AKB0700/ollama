@@ -53,7 +53,7 @@ git_module_setup() {
     # Make sure the tree is clean after the directory moves
     if [ -d "${LLAMACPP_DIR}/gguf" ]; then
         echo "Cleaning up old submodule"
-        rm -rf ${LLAMACPP_DIR}
+        rm -rf "${LLAMACPP_DIR}"
     fi
     git submodule init || return 1
     if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
@@ -79,7 +79,7 @@ apply_patches() {
         return
     fi
     # Wire up our CMakefile
-    if ! grep ollama ${LLAMACPP_DIR}/CMakeLists.txt; then
+    if ! grep -q ollama ${LLAMACPP_DIR}/CMakeLists.txt; then
         echo 'add_subdirectory(../ext_server ext_server) # ollama' >>${LLAMACPP_DIR}/CMakeLists.txt
     fi
 
