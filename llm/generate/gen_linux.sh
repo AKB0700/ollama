@@ -56,6 +56,10 @@ source $(dirname $0)/gen_common.sh
 init_vars
 git_module_setup
 apply_patches
+if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
+    echo "Skipping LLM runner generation"
+    exit 0
+fi
 
 init_vars
 if [ -z "${OLLAMA_SKIP_STATIC_GENERATE}" -o "${OLLAMA_CPU_TARGET}" = "static" ]; then

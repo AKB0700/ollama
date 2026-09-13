@@ -54,12 +54,24 @@ git_module_setup() {
         echo "Cleaning up old submodule"
         rm -rf ${LLAMACPP_DIR}
     fi
-    git submodule init
-    git submodule update --force ${LLAMACPP_DIR}
+    if [ ! -d "${LLAMACPP_DIR}" ] || [ ! -f "${LLAMACPP_DIR}/CMakeLists.txt" ]; then
+        echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
+        SKIP_RUNNER_GENERATE=1
+        return
+    fi
+    if git submodule status -- "${LLAMACPP_DIR}" >/dev/null 2>&1; then
+        git submodule init
+        git submodule update --force ${LLAMACPP_DIR}
+    else
+        echo "llama.cpp is vendored, skipping submodule update"
+    fi
 
 }
 
 apply_patches() {
+    if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
+        return
+    fi
     # Wire up our CMakefile
     if ! grep ollama ${LLAMACPP_DIR}/CMakeLists.txt; then
         echo 'add_subdirectory(../ext_server ext_server) # ollama' >>${LLAMACPP_DIR}/CMakeLists.txt
@@ -79,6 +91,9 @@ apply_patches() {
 }
 
 build() {
+    if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
+        return
+    fi
     cmake -S ${LLAMACPP_DIR} -B ${BUILD_DIR} ${CMAKE_DEFS}
     cmake --build ${BUILD_DIR} ${CMAKE_TARGETS} -j8
 }
@@ -107,6 +122,9 @@ compress() {
 
 # Keep the local tree clean after we're done with the build
 cleanup() {
+    if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
+        return
+    fi
     (cd ${LLAMACPP_DIR}/ && git checkout CMakeLists.txt)
 
     if [ -n "$(ls -A ../patches/*.diff)" ]; then

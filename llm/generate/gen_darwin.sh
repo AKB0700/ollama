@@ -11,6 +11,10 @@ source $(dirname $0)/gen_common.sh
 init_vars
 git_module_setup
 apply_patches
+if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
+    echo "Skipping LLM runner generation"
+    exit 0
+fi
 
 sign() {
     if [ -n "$APPLE_IDENTITY" ]; then

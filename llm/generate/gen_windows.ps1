@@ -76,13 +76,26 @@ function init_vars {
 
 function git_module_setup {
     # TODO add flags to skip the init/patch logic to make it easier to mod llama.cpp code in-repo
-    & git submodule init
-    if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
-    & git submodule update --force "${script:llamacppDir}"
-    if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
+    if (!(Test-Path -Path "${script:llamacppDir}") -or !(Test-Path -Path "${script:llamacppDir}/CMakeLists.txt")) {
+        $script:skipRunnerGenerate = $true
+        write-host "llama.cpp source is unavailable at ${script:llamacppDir}, skipping LLM runner generation"
+        return
+    }
+    & git submodule status -- "${script:llamacppDir}" *> $null
+    if ($LASTEXITCODE -eq 0) {
+        & git submodule init
+        if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
+        & git submodule update --force "${script:llamacppDir}"
+        if ($LASTEXITCODE -ne 0) { exit($LASTEXITCODE)}
+    } else {
+        write-host "llama.cpp is vendored, skipping submodule update"
+    }
 }
 
 function apply_patches {
+    if ($script:skipRunnerGenerate) {
+        return
+    }
     # Wire up our CMakefile
     if (!(Select-String -Path "${script:llamacppDir}/CMakeLists.txt" -Pattern 'ollama')) {
         Add-Content -Path "${script:llamacppDir}/CMakeLists.txt" -Value 'add_subdirectory(../ext_server ext_server) # ollama'
@@ -110,6 +123,9 @@ function apply_patches {
 }
 
 function build {
+    if ($script:skipRunnerGenerate) {
+        return
+    }
     write-host "generating config with: cmake -S ${script:llamacppDir} -B $script:buildDir $script:cmakeDefs"
     & cmake --version
     & cmake -S "${script:llamacppDir}" -B $script:buildDir $script:cmakeDefs
@@ -156,6 +172,9 @@ function install {
 }
 
 function cleanup {
+    if ($script:skipRunnerGenerate) {
+        return
+    }
     $patches = Get-ChildItem "../patches/*.diff"
     foreach ($patch in $patches) {
         # Extract file paths from the patch file
@@ -401,6 +420,9 @@ init_vars
 if ($($args.count) -eq 0) {
     git_module_setup
     apply_patches
+    if ($script:skipRunnerGenerate) {
+        exit 0
+    }
     build_static
     if ($script:ARCH -eq "arm64") {
         build_cpu("ARM64")
