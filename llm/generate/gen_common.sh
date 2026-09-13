@@ -50,13 +50,16 @@ git_module_setup() {
         return
     fi
     local has_llama_submodule=0
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+    local gitmodules_path="${repo_root}/.gitmodules"
     # Make sure the tree is clean after the directory moves
     if [ -d "${LLAMACPP_DIR}/gguf" ]; then
         echo "Cleaning up old submodule"
         rm -rf "${LLAMACPP_DIR}"
     fi
     git submodule init || return 1
-    if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | sed -e 's/^[^ ]* //' | grep -Fxq "llm/llama.cpp"; then
+    if [ -f "${gitmodules_path}" ] && git config --file "${gitmodules_path}" --get-regexp '^submodule\..*\.path$' 2>/dev/null | sed -e 's/^[^ ]* //' | grep -Fxq "llm/llama.cpp"; then
         has_llama_submodule=1
         git submodule update --force "${LLAMACPP_DIR}" || return 1
     else

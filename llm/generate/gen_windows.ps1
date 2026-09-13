@@ -77,8 +77,11 @@ function init_vars {
 function git_module_setup {
     # TODO add flags to skip the init/patch logic to make it easier to mod llama.cpp code in-repo
     $hasSubmodulePath = $false
-    if (Test-Path "../../.gitmodules") {
-        $submodulePaths = & git config --file "../../.gitmodules" --get-regexp '^submodule\..*\.path$' 2>$null | ForEach-Object {
+    $repoRoot = (& git rev-parse --show-toplevel 2>$null)
+    $repoRoot = $repoRoot.Trim()
+    $gitmodulesPath = Join-Path $repoRoot ".gitmodules"
+    if (Test-Path $gitmodulesPath) {
+        $submodulePaths = & git config --file $gitmodulesPath --get-regexp '^submodule\..*\.path$' 2>$null | ForEach-Object {
             $_ -replace '^[^ ]+ ', ''
         }
         $hasSubmodulePath = $submodulePaths -contains "llm/llama.cpp"
