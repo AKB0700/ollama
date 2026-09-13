@@ -102,6 +102,28 @@ function git_module_setup {
     }
 }
 
+function Get-PatchFilePaths {
+    param(
+        [string]$PatchFile,
+        [switch]$ForCleanup
+    )
+
+    $oldPath = $null
+    Get-Content $PatchFile | ForEach-Object {
+        if ($_ -match '^--- ') {
+            $oldPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+            return
+        }
+        if ($_ -match '^\+\+\+ ') {
+            $newPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
+            if ($ForCleanup -and $newPath -eq '/dev/null') {
+                return $oldPath
+            }
+            return $newPath
+        }
+    } | Where-Object { $_ -and $_ -ne '/dev/null' } | Sort-Object -Unique
+}
+
 function apply_patches {
     if ($script:skipRunnerGenerate) {
         return
@@ -114,13 +136,7 @@ function apply_patches {
     # Apply temporary patches until fix is upstream
     $patches = Get-ChildItem "../patches/*.diff"
     foreach ($patch in $patches) {
-        # Extract file paths from the patch file
-        $filePaths = Get-Content $patch.FullName | Where-Object { $_ -match '^\+\+\+ ' } | ForEach-Object {
-            $parts = $_ -split ' '
-            ($parts[1] -split '/', 2)[1]
-        }
-
-        # Checkout each file
+        $filePaths = Get-PatchFilePaths -PatchFile $patch.FullName
         foreach ($file in $filePaths) {
             git -C "${script:llamacppDir}" checkout $file
         }
@@ -187,21 +203,7 @@ function cleanup {
     }
     $patches = Get-ChildItem "../patches/*.diff"
     foreach ($patch in $patches) {
-        $oldPath = $null
-        $filePaths = Get-Content $patch.FullName | ForEach-Object {
-            if ($_ -match '^--- ') {
-                $oldPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
-                return
-            }
-            if ($_ -match '^\+\+\+ ') {
-                $newPath = (($_ -split ' ', 2)[1] -replace '^[ab]/', '')
-                if ($newPath -eq '/dev/null') {
-                    return $oldPath
-                }
-                return $newPath
-            }
-        } | Where-Object { $_ -and $_ -ne '/dev/null' } | Sort-Object -Unique
-
+        $filePaths = Get-PatchFilePaths -PatchFile $patch.FullName -ForCleanup
         foreach ($file in $filePaths) {
             git -C "${script:llamacppDir}" checkout HEAD -- $file *> $null
         }
