@@ -58,7 +58,7 @@ git_module_setup() {
     git submodule init || return 1
     if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
         has_llama_submodule=1
-        git submodule update --force ${LLAMACPP_DIR} || return 1
+        git submodule update --force "${LLAMACPP_DIR}" || return 1
     else
         echo "llama.cpp is vendored, skipping submodule update"
     fi
@@ -79,8 +79,8 @@ apply_patches() {
         return
     fi
     # Wire up our CMakefile
-    if ! grep -q ollama ${LLAMACPP_DIR}/CMakeLists.txt; then
-        echo 'add_subdirectory(../ext_server ext_server) # ollama' >>${LLAMACPP_DIR}/CMakeLists.txt
+    if ! grep -q ollama "${LLAMACPP_DIR}/CMakeLists.txt"; then
+        echo 'add_subdirectory(../ext_server ext_server) # ollama' >>"${LLAMACPP_DIR}/CMakeLists.txt"
     fi
 
     if [ -n "$(ls -A ../patches/*.diff)" ]; then
@@ -100,8 +100,8 @@ build() {
     if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
         return
     fi
-    cmake -S ${LLAMACPP_DIR} -B ${BUILD_DIR} ${CMAKE_DEFS}
-    cmake --build ${BUILD_DIR} ${CMAKE_TARGETS} -j8
+    cmake -S "${LLAMACPP_DIR}" -B "${BUILD_DIR}" ${CMAKE_DEFS}
+    cmake --build "${BUILD_DIR}" ${CMAKE_TARGETS} -j8
 }
 
 compress() {
@@ -131,7 +131,7 @@ cleanup() {
     if [ -n "${SKIP_RUNNER_GENERATE}" ]; then
         return
     fi
-    (cd ${LLAMACPP_DIR}/ && git checkout CMakeLists.txt)
+    (cd "${LLAMACPP_DIR}/" && git checkout CMakeLists.txt)
 
     if [ -n "$(ls -A ../patches/*.diff)" ]; then
         for patch in ../patches/*.diff; do
