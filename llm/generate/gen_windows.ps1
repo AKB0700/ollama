@@ -92,7 +92,7 @@ function git_module_setup {
         write-host "llama.cpp is vendored, skipping submodule update"
     }
     if (!(Test-Path -Path "${script:llamacppDir}") -or !(Test-Path -Path "${script:llamacppDir}/CMakeLists.txt")) {
-        if (-not $hasSubmodulePath -and (Test-Path -Path "../../llama/llama.cpp")) {
+        if (-not $hasSubmodulePath) {
             $script:skipRunnerGenerate = $true
             write-host "llama.cpp source is unavailable at ${script:llamacppDir}, skipping LLM runner generation"
             return

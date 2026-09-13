@@ -63,7 +63,7 @@ git_module_setup() {
         echo "llama.cpp is vendored, skipping submodule update"
     fi
     if [ ! -d "${LLAMACPP_DIR}" ] || [ ! -f "${LLAMACPP_DIR}/CMakeLists.txt" ]; then
-        if [ ${has_llama_submodule} -eq 0 ] && [ -d ../../llama/llama.cpp ]; then
+        if [ ${has_llama_submodule} -eq 0 ]; then
             echo "llama.cpp source is unavailable at ${LLAMACPP_DIR}, skipping LLM runner generation"
             SKIP_RUNNER_GENERATE=1
             return
