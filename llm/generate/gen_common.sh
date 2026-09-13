@@ -139,7 +139,7 @@ cleanup() {
         for patch in ../patches/*.diff; do
             while IFS= read -r file; do
                 (cd "${LLAMACPP_DIR}" && git checkout HEAD -- "${file}" >/dev/null 2>&1)
-            done < <(awk '/^--- /{old=$2; sub(/^[ab]\//, "", old)} /^\+\+\+ /{new=$2; sub(/^[ab]\//, "", new); if (new == "/dev/null") print old; else print new}' "${patch}" | grep -Fvx "/dev/null" | sort -u)
+            done < <(awk '/^--- /{old=$2; sub(/\t.*$/, "", old); sub(/^[ab]\//, "", old)} /^\+\+\+ /{new=$2; sub(/\t.*$/, "", new); sub(/^[ab]\//, "", new); if (new == "/dev/null") print old; else print new}' "${patch}" | grep -Fvx "/dev/null" | sort -u)
         done
     fi
 }
