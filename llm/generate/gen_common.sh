@@ -56,7 +56,7 @@ git_module_setup() {
         rm -rf "${LLAMACPP_DIR}"
     fi
     git submodule init || return 1
-    if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep -Fxq "llm/llama.cpp"; then
+    if [ -f ../../.gitmodules ] && git config --file ../../.gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | sed -e 's/^[^ ]* //' | grep -Fxq "llm/llama.cpp"; then
         has_llama_submodule=1
         git submodule update --force "${LLAMACPP_DIR}" || return 1
     else

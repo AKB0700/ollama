@@ -79,7 +79,7 @@ function git_module_setup {
     $hasSubmodulePath = $false
     if (Test-Path "../../.gitmodules") {
         $submodulePaths = & git config --file "../../.gitmodules" --get-regexp '^submodule\..*\.path$' 2>$null | ForEach-Object {
-            ($_ -split '\s+', 2)[1]
+            $_ -replace '^[^ ]+ ', ''
         }
         $hasSubmodulePath = $submodulePaths -contains "llm/llama.cpp"
     }
